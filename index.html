@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mizahi Müslümanlık Testi - Kara Mizah Versiyon</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #bbf7d0, #86efac, #22c55e, #065f46);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      color: #1f2937;
+    }
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(14px) saturate(180%);
+      border-radius: 1.25rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .neon-title {
+      color: #065f46;
+      text-shadow: 0 0 10px rgba(34,197,94,.7);
+    }
+    .playing { box-shadow: 0 0 15px 5px rgba(34,197,94,0.6); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
+
+  <h1 id="title" class="text-4xl md:text-5xl font-extrabold mb-6 neon-title text-center">
+    🌙 Müslümanlık Testi 🌙
+  </h1>
+
+  <!-- Dil Seçici -->
+  <div class="mb-6 flex gap-4">
+    <button onclick="setLang('tr')" class="px-4 py-2 bg-green-700 text-white rounded-xl">🇹🇷 Türkçe</button>
+    <button onclick="setLang('en')" class="px-4 py-2 bg-blue-700 text-white rounded-xl">🇬🇧 English</button>
+  </div>
+
+  <!-- Ezan Kontrolleri -->
+  <div class="mb-6 flex gap-4">
+    <button id="play-btn" type="button" onclick="playEzan()" class="px-4 py-2 bg-green-600 text-white rounded-xl">📢 Ezanı Çal</button>
+    <button id="pause-btn" type="button" onclick="pauseEzan()" class="px-4 py-2 bg-red-600 text-white rounded-xl">🔇 Sustur</button>
+  </div>
+
+  <audio id="ezan-audio" preload="auto" src="https://www.islamcan.com/audio/adhan/azan1.mp3"></audio>
+
+  <!-- Quiz -->
+  <div id="quiz" class="card p-8 max-w-2xl w-full">
+    <div id="question-container">
+      <h2 id="progress" class="text-xl text-gray-600 mb-2">Soru 1 / 20</h2>
+      <h2 id="question" class="text-2xl font-semibold mb-4">Soru buraya gelecek</h2>
+      <p id="verse" class="italic text-green-800 mb-6">"Ayet buraya gelecek"</p>
+      <div id="options" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <div id="result" class="hidden card p-8 max-w-2xl w-full mt-8 text-center"></div>
+
+  <script>
+    const questions = {
+      tr: [
+        { q: "Namaz vakti geldiğinde genelde ne yaparsın?", o: ["Telefonu sessize alırım", "Namazı ertelerim", "Kıldım derim geçerim", "Gerçekten kılarım"] },
+        { q: "Oruçluyken gizlice su içtin mi?", o: ["Her Ramazan su fabrikası gibi", "Bazen dayanamam", "Hiç yapmadım", "İçmem, direk yemek yerim"] },
+        { q: "Cuma hutbesinde en çok ne yaparsın?", o: ["Uyurum", "Telefonla oynarım", "Hocayı dinlerim gibi yaparım", "Gerçekten dinlerim"] },
+        { q: "Kandil gecelerinde ilk işin?", o: ["Lokma kuyruğuna girmek", "Story atmak", "Sadece uyumak", "Gerçekten dua etmek"] },
+        { q: "Hoca 'amin' derken sen?", o: ["Geç kaldım mı diye bakarım", "Dalgın dalgın bakarım", "Telefonu kurcalarım", "Gerçekten 'amin' derim"] },
+        { q: "Ramazanda sahura kalkmadın, ne yaparsın?", o: ["Günü uyuyarak geçiririm", "Orucu bozup pizza söylerim", "Sosyal medyada bahane uydururum", "Direk sabrederim"] },
+        { q: "Bayram namazına gidince ilk işin?", o: ["Selfie çekmek", "Arkadaş aramak", "Tatlılara saldırmak", "Gerçekten namaz kılmak"] },
+        { q: "Kur’an okurken hislerin?", o: ["Arada şarkıya kayarım", "Anlamam ama okurum", "Sadece story atarım", "Gerçekten dinlerim"] },
+        { q: "Camideki çocuk koşunca?", o: ["Ben de koşarım", "Kızarım", "Görmezden gelirim", "Gülümserim"] },
+        { q: "Ezan okununca?", o: ["Kulaklığı takarım", "Erteleyip uyurum", "Bahane bulurum", "Hemen kalkarım"] },
+        { q: "Oruç bozulunca ilk ne yaparsın?", o: ["Telefonuma bakarım", "Gazoz patlatırım", "Dondurma yerim", "Hurmayla açarım"] },
+        { q: "Kurban bayramında sen?", o: ["Selfie çekerim", "Sosis yerim", "Kokudan kaçarım", "Et dağıtırım"] },
+        { q: "Hacca gitsem ilk işim?", o: ["Story atmak", "Selfie çekmek", "Kaybolmak", "Gerçekten tavaf etmek"] },
+        { q: "Camide terlik kaybolunca?", o: ["Kavga çıkarırım", "Başkasını alırım", "Ağlarım", "Sabrederim"] },
+        { q: "Dua ederken genelde?", o: ["Telefon isterim", "Sevdiğim beni sevsin isterim", "Loto tutmasını isterim", "Gerçekten dua ederim"] },
+        { q: "İftar davetinde ilk işin?", o: ["Selfie", "Menüyü sormak", "Geç gelmek", "Gerçekten iftar etmek"] },
+        { q: "Hoca uzun dua ederse?", o: ["Telefonuma bakarım", "Erken çıkarım", "İçimden söylenirim", "Sabrederim"] },
+        { q: "Cuma günü ilk işin?", o: ["Mesaj atmak", "Sosyal medya", "Geç uyanmak", "Camide olmak"] },
+        { q: "Teravih senin için?", o: ["Koşu bandı", "Uzun işkence", "Arkadaş buluşması", "Gerçek ibadet"] },
+        { q: "Din dersi öğretmenine?", o: ["TikTok videosu gösteririm", "Uykum gelir", "Saçma sorular sorarım", "Saygı duyarım"] },
+      ],
+      en: [
+        { q: "What do you usually do when it's prayer time?", o: ["Mute my phone", "Postpone it", "Say I prayed already", "Actually pray"] },
+        { q: "Ever secretly drank water while fasting?", o: ["Every Ramadan I'm a water factory", "Sometimes I can't resist", "Never", "I eat instead"] },
+        { q: "During Friday sermon, you usually?", o: ["Sleep", "Play with phone", "Pretend to listen", "Really listen"] },
+        { q: "On holy nights first thing you do?", o: ["Queue for free food", "Instagram story", "Sleep", "Really pray"] },
+        { q: "When imam says 'amin'?", o: ["Check time", "Daydream", "Use phone", "Say 'amin'"] },
+        { q: "Missed sahur, what do you do?", o: ["Sleep all day", "Order pizza", "Excuse online", "Just be patient"] },
+        { q: "At Eid prayer first move?", o: ["Selfie", "Call friends", "Attack sweets", "Pray"] },
+        { q: "When reading Qur’an?", o: ["Sing instead", "Don’t understand but read", "Just story it", "Listen sincerely"] },
+        { q: "Kid runs in mosque?", o: ["Run too", "Get mad", "Ignore", "Smile"] },
+        { q: "When adhan is called?", o: ["Put headphones", "Sleep", "Find excuse", "Pray"] },
+        { q: "First thing after fasting?", o: ["Check phone", "Drink soda", "Eat ice cream", "Break with date"] },
+        { q: "On sacrifice feast?", o: ["Take selfies", "Eat sausage", "Avoid smell", "Distribute meat"] },
+        { q: "If you go to Hajj, first thing?", o: ["Story", "Selfie", "Get lost", "Tawaf"] },
+        { q: "If slippers stolen in mosque?", o: ["Fight", "Steal another", "Cry", "Be patient"] },
+        { q: "While praying, usually ask for?", o: ["iPhone", "Crush loves me", "Lottery win", "Real prayers"] },
+        { q: "At iftar invite, first?", o: ["Selfie", "Ask menu", "Be late", "Eat"] },
+        { q: "Long dua by imam?", o: ["Check phone", "Leave early", "Complain", "Be patient"] },
+        { q: "On Friday first thing?", o: ["Text", "Social media", "Sleep late", "Mosque"] },
+        { q: "Tarawih for you?", o: ["Treadmill", "Torture", "Meet friends", "Worship"] },
+        { q: "To religion teacher?", o: ["Show TikTok", "Sleep", "Weird questions", "Respect"] },
+      ]
+    };
+
+    const verses = [
+      "Allah sabredenlerle beraberdir. (Bakara 2:153)",
+      "Şüphesiz güçlükle beraber kolaylık vardır. (İnşirah 94:6)",
+      "Namazı dosdoğru kılın. (Bakara 2:43)",
+      "Ey iman edenler! Sabır ve namazla Allah’tan yardım dileyin. (Bakara 2:45)",
+      "Allah dilediğine rızkı bol verir. (Bakara 2:212)",
+      "Kim Allah’a tevekkül ederse O, ona yeter. (Talak 65:3)",
+      "Allah güzeldir, güzelliği sever. (Müslim)",
+      "İyilik edenlere Allah iyilik eder. (Kasas 28:77)",
+      "Allah adaleti emreder. (Nahl 16:90)",
+      "Sabredenlere mükafat hesapsız verilir. (Zümer 39:10)",
+      "Allah gafurdur, rahimdir. (Bakara 2:173)",
+      "Her zorlukla beraber bir kolaylık vardır. (İnşirah 94:5)",
+      "Allah’ın rahmetinden ümit kesmeyin. (Zümer 39:53)",
+      "Allah her şeyi hakkıyla bilendir. (Hucurat 49:13)",
+      "Allah’a güvenen kimseye Allah yeter. (Talak 65:3)",
+      "Allah namazı dosdoğru kılmanızı ister. (Bakara 2:43)",
+      "Allah merhametlilerin en merhametlisidir. (Araf 7:151)",
+      "Allah’a yardım edenlere Allah yardım eder. (Muhammed 47:7)",
+      "Allah çok bağışlayıcıdır. (Nisa 4:106)",
+      "Allah kullarına zulmetmez. (Yunus 10:44)",
+      "Allah kullarına şefkatlidir. (Bakara 2:207)",
+      "Allah şükredenleri sever. (Bakara 2:152)",
+      "Allah affedicidir. (Nisa 4:43)",
+      "Allah doğruları sever. (Saff 61:3)",
+      "Allah iyilik edenleri sever. (Maide 5:13)",
+      "Allah’ın ipine sımsıkı sarılın. (Ali İmran 3:103)",
+      "Allah’ın nimetini hatırlayın. (Bakara 2:231)",
+      "Allah kullarına kolaylık diler. (Bakara 2:185)",
+      "Allah sabredenleri müjdeler. (Bakara 2:155)",
+      "Allah ilim sahiplerini yükseltir. (Mücadele 58:11)",
+      "Allah’ın huzuruna döneceksiniz. (Bakara 2:156)",
+      "Allah rızık verendir. (Zariyat 51:58)",
+      "Allah bağışlayandır. (Nisa 4:99)",
+      "Allah’ın yardımı yakındır. (Bakara 2:214)",
+      "Allah kuluna yeter. (Zümer 39:36)",
+      "Allah doğrulukla konuşun buyurur. (Ahzab 33:70)",
+      "Allah adaletli olun buyurur. (Nahl 16:90)",
+      "Allah’ın zikri kalplere huzur verir. (Rad 13:28)",
+      "Allah’ın vaadi haktır. (Yunus 10:55)",
+      "Allah’ın rahmeti geniştir. (Araf 7:156)",
+      "Allah kullarına zulmetmez. (Ali İmran 3:182)",
+      "Allah’ın izni olmadan hiçbir şey olmaz. (Teğabün 64:11)",
+      "Allah kullarını sever. (Bakara 2:195)",
+      "Allah’a dua edin. (Mümin 40:60)",
+      "Allah yolunda olanları müjdeler. (Tevbe 9:20)",
+      "Allah’ın azabı şiddetlidir. (Bakara 2:196)",
+      "Allah’a güvenin. (Ali İmran 3:159)",
+      "Allah kullarına hidayet eder. (Bakara 2:2)",
+      "Allah’ın nuru her şeyi aydınlatır. (Nur 24:35)",
+      "Allah gafurdur. (Nisa 4:23)",
+    ];
+
+    const results = {
+      tr: [
+        { title: "☪️ Cami Selfiecisi", desc: "Cami senin için ibadet değil story fonu. Allah affeder mi bilinmez, ama takipçilerin affetmez." },
+        { title: "📿 Günah Koleksiyoneri", desc: "Günahları NFT gibi topluyorsun. Belki cennet yok ama stand-up sahnesi var." },
+        { title: "🕌 Arada Takılan", desc: "Bazen kılıyorsun bazen unutuyorsun. İlişkin elektrik faturası gibi: son gün aklına geliyor." },
+        { title: "🛋️ Kanepe Müslümanı", desc: "İbadet senin için Netflix gibi: 'sonra izlerim'. Ama kalbin temiz, öyle diyelim." },
+        { title: "🌟 Gerçek Mümin (?)", desc: "Her şeyi tam yapıyorsun. Belki cennet bile sana sıkıcı gelir ama helal olsun." }
+      ],
+      en: [
+        { title: "☪️ Mosque Selfie Addict", desc: "Mosque is more for selfies than prayers. God may forgive, but Instagram won’t." },
+        { title: "📿 Sin Collector", desc: "You collect sins like rare cards. Maybe no heaven, but comedy club awaits." },
+        { title: "🕌 Sometimes Believer", desc: "Faith like bills: only remembered at deadline. Still counts tho." },
+        { title: "🛋️ Couch Muslim", desc: "Worship = Netflix for you. 'Later maybe.' Clean heart saves?" },
+        { title: "🌟 Real Believer (?)", desc: "You nailed it. Heaven might be boring, but respect!" }
+      ]
+    };
+
+    let currentQuestion = 0, score = 0, currentLang = "tr";
+
+    function showQuestion() {
+      const q = questions[currentLang][currentQuestion];
+      if (!q) return;
+      document.getElementById("progress").textContent =
+        `${currentLang === 'tr' ? 'Soru' : 'Question'} ${currentQuestion+1} / ${questions[currentLang].length}`;
+      document.getElementById("question").textContent = q.q;
+      document.getElementById("verse").textContent = verses[Math.floor(Math.random() * verses.length)];
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+      q.o.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.className = "w-full px-4 py-3 bg-green-200 hover:bg-green-400 rounded-xl text-lg";
+        btn.onclick = () => {
+          score += i;
+          currentQuestion++;
+          if (currentQuestion < questions[currentLang].length) showQuestion();
+          else showResult();
+        };
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function showResult() {
+      document.getElementById("quiz").classList.add("hidden");
+      const resultBox = document.getElementById("result");
+      resultBox.classList.remove("hidden");
+      const resIndex = score % results[currentLang].length;
+      const res = results[currentLang][resIndex];
+      resultBox.innerHTML = `
+        <h2 class="text-3xl font-bold mb-4">${currentLang === "tr" ? "Sonuç:" : "Result:"}</h2>
+        <p class="text-2xl mb-2">${res.title}</p>
+        <p class="text-lg text-gray-700 mb-4">${res.desc}</p>
+        <p class="italic text-green-800 mb-6">${verses[Math.floor(Math.random() * verses.length)]}</p>
+        <button onclick="restartQuiz()" class="mt-6 px-6 py-3 bg-green-700 text-white rounded-xl text-lg">
+          🔄 ${currentLang === "tr" ? "Baştan Başla" : "Restart Quiz"}
+        </button>
+      `;
+    }
+
+    function restartQuiz() {
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById("quiz").classList.remove("hidden");
+      document.getElementById("result").classList.add("hidden");
+      showQuestion();
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById("quiz").classList.remove("hidden");
+      document.getElementById("result").classList.add("hidden");
+      document.getElementById("title").textContent =
+        lang === "tr" ? "🌙 Müslümanlık Testi 🌙" : "🌙 Muslim Test 🌙";
+      showQuestion();
+    }
+
+    function playEzan() {
+      const audio = document.getElementById("ezan-audio");
+      const btn = document.getElementById("play-btn");
+      btn.classList.add("playing");
+      audio.currentTime = 0;
+      audio.play().catch(err => {
+        console.error("Audio play failed:", err);
+        btn.classList.remove("playing");
+        alert("Tarayıcı ses oynatmayı engelledi. Lütfen sayfada bir kere tıkla ve tekrar dene.");
+      });
+    }
+
+    function pauseEzan() {
+      const audio = document.getElementById("ezan-audio");
+      const btn = document.getElementById("play-btn");
+      audio.pause();
+      audio.currentTime = 0;
+      btn.classList.remove("playing");
+    }
+
+    window.onload = showQuestion;
+  </script>
+</body>
+</html>
